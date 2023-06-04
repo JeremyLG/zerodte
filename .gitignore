@@ -16,3 +16,5 @@ pynecone.db
 # Ignore data
 data/*
 !data/.gitkeep
+
+.env

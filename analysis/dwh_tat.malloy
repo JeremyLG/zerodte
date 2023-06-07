@@ -1,0 +1,90 @@
+sql: tat_sql_db is {
+    connection: "duckdb"
+    select:
+        """
+            select
+                * exclude(DateOpened, DateClosed)
+                -- trick to convert sqlite bigint UTC+1 to timestamp EST
+                , ((to_timestamp((DateOpened/10000000-62135596800)::bigint) at time zone 'Europe/Paris') at time zone 'America/New_York')::timestamp as DateOpened
+                , ((to_timestamp((DateClosed/10000000-62135596800)::bigint) at time zone 'Europe/Paris') at time zone 'America/New_York')::timestamp as DateClosed
+            from read_csv_auto("../data/tat/database/trade.csv", auto_detect=true)
+        """
+  }
+
+source: tat is from_sql(tat_sql_db) {
+
+    primary_key: TradeID
+
+    declare:
+        opened_date is DateOpened.day
+        is_trade_won is ProfitLoss >= 0
+        slippage is pick PriceStopTarget + PriceClose when (PriceClose < 0) and (abs(PriceClose) > PriceStopTarget) else 0
+
+    where:
+        Status != -1
+
+    measure:
+        sum_premium is sum(TotalPremium)
+        sum_profit is sum(ProfitLoss)
+        sum_profit_wo_qty is sum(ProfitLoss/Qty)
+        sum_profit_net is sum(ProfitLossNet)
+        sum_commissions is sum_profit_net - sum_profit
+        pcr is sum_profit/sum_premium*100
+        avg_premium is avg(PriceOpen)
+        sum_slippage is sum(abs(slippage))*100
+        avg_slippage is abs(sum_slippage/stopped_count/100)
+        win_or_lose is pick 'Win' when sum_profit >= 0 else 'Lose'
+
+        win_trades_count is count(distinct pick TradeID when is_trade_won else null)
+        wr is 100*win_trades_count/trades_count
+
+        trades_count is count(distinct TradeID)
+        closed_count is count(distinct pick TradeID when Status = 3 else null)
+        stopped_count is count(distinct pick TradeID when Status = 2 else null)
+        expired_count is count(distinct pick TradeID when Status = 4 else null)
+
+        bp_avg is sum(BuyingPower)/days_count
+        days_count is count(distinct opened_date)
+
+    query: money_metrics is {
+    aggregate:
+        sum_premium
+        sum_profit
+        pcr
+        wr
+        sum_slippage
+        avg_slippage
+        // bp_avg
+        // return_on_bp is 100*sum_profit/bp_avg
+    }
+    query: trades_metrics is {
+        aggregate:
+            trades_count
+            closed_count
+            stopped_count
+            expired_count
+    }
+    query: fees_metrics is {
+        aggregate:
+            avg_premium
+            sum_slippage
+            avg_slippage
+            sum_commissions
+    }
+    // Daily Statistics
+    query: daily is {
+        group_by: opened_date
+        aggregate:
+            win_or_lose
+            sum_profit
+            days_count
+            all_days is all(days_count)
+    }
+    -> {
+        group_by: win_or_lose
+        aggregate:
+            days_count is days_count.sum()
+            days_percent is days_count.sum() / any_value(all_days)
+            avg_profit is sum(sum_profit)/days_count.sum()
+    }
+}

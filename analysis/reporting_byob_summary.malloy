@@ -1,0 +1,15 @@
+--! styles styles/reporting_byob_summary.styles.json
+
+import "dwh_byob_summary.malloy"
+
+query: byob_summary -> {
+    where: entry_time_month > '2022-05-01'::timestamp and is_main_strategy
+    aggregate:
+        total_profit
+        total_profit_morning
+        total_profit_afternoon
+    nest:
+        total_profit_by_day_morning
+        total_profit_by_day_afternoon
+        total_profit_by_month
+}

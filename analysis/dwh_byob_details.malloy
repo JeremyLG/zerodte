@@ -1,0 +1,24 @@
+--! styles styles/trades.styles.json
+
+source: byob_detail is table('duckdb:../data/byob/2.1-50-1.5-trades.csv') {
+  
+    primary_key: pkey
+  
+    declare:
+        id is split_part(trade, '-', 1)
+        pkey is concat(id, EntryTime::string, Time::string)
+        is_stopped is `Bid High` > open_price*(1 + 1.5)
+        profit is 100*(open_price - `Bid High`) - 3.2
+    
+    measure:
+        count_trades is count(distinct id)
+    
+    query: was_stopped is {
+        group_by: id
+        aggregate:
+            was_stopped is sum(pick 1 when is_stopped else 0) > 0
+    } -> {
+        group_by: was_stopped
+        aggregate: ids is count(distinct id)
+    }
+}

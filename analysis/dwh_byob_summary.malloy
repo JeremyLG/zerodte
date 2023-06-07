@@ -1,0 +1,64 @@
+source: byob_summary is table('duckdb:../data/byob/all*/*.csv') {
+  
+    primary_key: TradeID
+
+    declare:
+        stop is trim(StopLossTarget, 'x')::number
+        open_slippage is 5
+        morning_or_afternoon is pick 'Morning' when hour(EntryTime) < 12 else 'Afternoon'
+        strategy_entry is concat(stop, '-', lpad(hour(EntryTime)::string, 2, '0'), ':', lpad(minute(EntryTime)::string, 2, '0'))
+        stop_at is strptime(StopLossDateTime, '%m/%d/%Y %I:%M:%S %p')::timestamp
+        entry_time_date is EntryTime.day
+        entry_time_month is EntryTime.month
+        entry_time_daynumber is day_of_week(EntryTime)
+        entry_time_dayname is entry_time_daynumber ?
+            pick '  Monday' when 2
+            pick '  Tuesday' when 3
+            pick '  Wednesday' when 4
+            pick ' Thursday' when 5
+            pick 'Friday' when 6
+            pick 'Saturday' when 0
+            pick 'Sunday' when 1
+            else null
+        is_main_strategy is strategy_entry = '1.5-09:33' | = '1.5-10:15' | = '1.0-11:00' | = '1.0-14:00' | = '1.0-14:45' | = '1.0-15:15'
+
+    measure:
+        trades_count is count()
+        total_profit is sum(ProfitLossAfterSlippage*100 - open_slippage -CommissionFees)
+        total_profit_morning is sum(pick ProfitLossAfterSlippage*100 - open_slippage - CommissionFees when morning_or_afternoon = 'Morning' else 0)
+        total_profit_afternoon is sum(pick ProfitLossAfterSlippage*100 - open_slippage - CommissionFees when morning_or_afternoon = 'Afternoon' else 0)
+
+    query: total_profit_by_day is {
+        group_by: entry_time_dayname
+        order_by: entry_time_dayname
+        aggregate: total_profit
+        group_by: strategy_entry
+    }
+    query: total_profit_daily is {
+        group_by:
+            entry_time_date
+            strategy_entry
+        order_by: open_day desc
+        aggregate: total_profit
+    }
+    query: total_profit_by_day_morning is {
+        group_by: entry_time_dayname
+        order_by: entry_time_dayname
+        aggregate: total_profit_morning
+    }
+    query: total_profit_by_day_afternoon is {
+        group_by: entry_time_dayname
+        order_by: entry_time_dayname
+        aggregate: total_profit_afternoon
+    }
+    query: total_profit_by_month is {
+        group_by: entry_time_month
+        order_by: entry_time_month
+        aggregate: 
+            total_profit
+            total_profit_morning
+            total_profit_afternoon
+        nest: total_profit_by_day_morning
+        nest: total_profit_by_day_afternoon
+    }
+}

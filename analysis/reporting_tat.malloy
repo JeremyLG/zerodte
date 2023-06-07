@@ -1,0 +1,18 @@
+--! styles styles/reporting_tat.styles.json
+
+import "dwh_tat.malloy"
+
+query: tat_dashboard is tat -> {
+  nest: money_metrics
+  nest: trades_metrics
+  nest: fees_metrics
+  nest: metrics_by_tradetype is {
+    group_by: TradeType
+    aggregate: money_metrics
+  }
+  nest: metrics_by_date is {
+    group_by: opened_date
+    aggregate: money_metrics
+  }
+  nest: daily
+}

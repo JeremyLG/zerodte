@@ -24,13 +24,15 @@ def build_req_v2(
     start_date,
     end_date,
 ):
-    def build_multiple_entries(entries: list[str]):
+    def build_multiple_entries(entries: list[str] | None):
         """
         Build filtered entries through inverting et reverting mapping
-        """
-        inv_map = {v: k for k, v in mapping_v2.items()}
-        filtered_mapping = {key: inv_map[key] for key in entries}
-        return {v: k for k, v in filtered_mapping.items()}
+        """    
+        if entries:
+            inv_map = {v: k for k, v in mapping_v2.items()}
+            filtered_mapping = {key: inv_map[key] for key in entries}
+            return {v: k for k, v in filtered_mapping.items()}
+        return mapping_v2
 
     def build_date(dt: datetime.datetime) -> str:
         """
@@ -107,35 +109,36 @@ def get_last_date(directory: str) -> datetime.date | None:
 
 
 if __name__ == "__main__":
-    strategy_name = CONF.get("strategy_name")
-    directory = f"../../data/byob/{strategy_name}"
-    os.makedirs(directory) if not os.path.exists(directory) else None
-    start_date = (
-        get_last_date(directory) or CONF.get("start_date") or datetime.date(2020, 1, 1)
-    )
-    end_date = CONF.get("end_date") or datetime.date.today()
-    dfs = []
-    for experiment in CONF.get("strategies"):
-        mini_experiments = [
-            {
-                **experiment,
-                "start_date": st,
-                "end_date": ed,
-            }
-            for st, ed in generate_date_ranges(start_date, end_date)
-        ]
-        for mini_experiment in mini_experiments:
-            logging.info(f"Going for the experiment: {mini_experiment}")
-            dfs.append(build_req_v2(**mini_experiment))
-    if any(df is not None for df in dfs):
-        csv_files = glob.glob(f"{directory}/*.csv")
-        for file in csv_files:
-            logging.info("concatening new data with existing file")
-            df = pd.read_csv(file)
-            dfs.append(df)
-            logging.info("removing old csv file")
-            os.remove(file)
-        df = pd.concat(dfs)
-        end_date = pd.to_datetime(df["EntryTime"]).dt.strftime("%Y-%m-%d").max()
-        logging.info("saving data file")
-        df.to_csv(f"{directory}/{end_date}.csv")
+    for strategy in CONF:
+        strategy_name = strategy.get("strategy_name")
+        directory = f"../../data/byob/{strategy_name}"
+        os.makedirs(directory) if not os.path.exists(directory) else None
+        start_date = (
+            get_last_date(directory) or strategy.get("start_date") or datetime.date(2020, 1, 1)
+        )
+        end_date = strategy.get("end_date") or datetime.date.today()
+        dfs = []
+        for experiment in strategy.get("strategies"):
+            mini_experiments = [
+                {
+                    **experiment,
+                    "start_date": st,
+                    "end_date": ed,
+                }
+                for st, ed in generate_date_ranges(start_date, end_date)
+            ]
+            for mini_experiment in mini_experiments:
+                logging.info(f"Going for the experiment: {mini_experiment}")
+                dfs.append(build_req_v2(**mini_experiment))
+        if any(df is not None for df in dfs):
+            csv_files = glob.glob(f"{directory}/*.csv")
+            for file in csv_files:
+                logging.info("concatening new data with existing file")
+                df = pd.read_csv(file)
+                dfs.append(df)
+                logging.info("removing old csv file")
+                os.remove(file)
+            df = pd.concat(dfs)
+            end_date = pd.to_datetime(df["EntryTime"]).dt.strftime("%Y-%m-%d").max()
+            logging.info("saving data file")
+            df.to_csv(f"{directory}/{end_date}.csv")

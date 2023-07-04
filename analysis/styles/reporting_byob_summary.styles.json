@@ -1,0 +1,201 @@
+{
+  "total_profit_by_day": {
+      "renderer": "vega",
+      "spec": {
+          "$schema": "https://vega.github.io/schema/vega-lite/v5.json",
+          "config": {
+            "params": [
+              {
+                "name": "defaultFont",
+                "value": "var(--malloy-font-family, Roboto)"
+              },
+              {
+                "name": "titleColor",
+                "value": "var(--malloy-title-color, #505050)"
+              },
+              {
+                "name": "labelColor",
+                "value": "var(--malloy-label-color, #505050)"
+              }
+            ],
+            "background": null,
+            "color": {"expr": "titleColor"},
+            "header": {
+              "labelFont": {"expr": "defaultFont"},
+              "titleFont": {"expr": "defaultFont"},
+              "titleFontWeight": 500
+            },
+            "text": {
+              "font": {"expr": "defaultFont"},
+              "color": {"expr": "labelColor"}
+            },
+            "mark": {
+              "font": {"expr": "defaultFont"},
+              "color": {"expr": "labelColor"}
+            },
+            "title": {
+              "font": {"expr": "defaultFont"},
+              "subtitleFont": {"expr": "defaultFont"},
+              "fontWeight": 500
+            },
+            "axis": {
+              "labelColor": {"expr": "labelColor"},
+              "labelFont": {"expr": "defaultFont"},
+              "titleFont": {"expr": "defaultFont"},
+              "titleFontWeight": 500,
+              "titleColor": {"expr": "titleColor"},
+              "titleFontSize": 12
+            },
+            "legend": {
+              "titleFontWeight": 500,
+              "titleColor": {"expr": "titleColor"},
+              "titleFontSize": 12,
+              "labelColor": {"expr": "labelColor"},
+              "labelFont": {"expr": "defaultFont"},
+              "titleFont": {"expr": "defaultFont"},
+              "labelAngle": -30
+            }
+          },
+          "mark": "bar",
+          "data": [],
+          "encoding": {
+              "x": {"field": "entry_time_dayname", "sort": null},
+              "y": {"field": "total_profit", "type": "quantitative", "sort": null},
+              "xOffset": {"field": "strategy_entry", "sort": "ascending"},
+              "color": {"field": "strategy_entry", "sort": "ascending"}
+          }
+      }
+  },
+  "total_profit_by_day_morning": {
+      "renderer": "vega",
+      "spec": {
+          "$schema": "https://vega.github.io/schema/vega-lite/v5.json",
+          "config": {
+            "params": [
+              {
+                "name": "defaultFont",
+                "value": "var(--malloy-font-family, Roboto)"
+              },
+              {
+                "name": "titleColor",
+                "value": "var(--malloy-title-color, #505050)"
+              },
+              {
+                "name": "labelColor",
+                "value": "var(--malloy-label-color, #505050)"
+              }
+            ],
+            "background": null,
+            "color": {"expr": "titleColor"},
+            "header": {
+              "labelFont": {"expr": "defaultFont"},
+              "titleFont": {"expr": "defaultFont"},
+              "titleFontWeight": 500
+            },
+            "text": {
+              "font": {"expr": "defaultFont"},
+              "color": {"expr": "labelColor"}
+            },
+            "mark": {
+              "font": {"expr": "defaultFont"},
+              "color": {"expr": "labelColor"}
+            },
+            "title": {
+              "font": {"expr": "defaultFont"},
+              "subtitleFont": {"expr": "defaultFont"},
+              "fontWeight": 500
+            },
+            "axis": {
+              "labelColor": {"expr": "labelColor"},
+              "labelFont": {"expr": "defaultFont"},
+              "titleFont": {"expr": "defaultFont"},
+              "titleFontWeight": 500,
+              "titleColor": {"expr": "titleColor"},
+              "titleFontSize": 12,
+              "labelAngle": -30
+            },
+            "legend": {
+              "titleFontWeight": 500,
+              "titleColor": {"expr": "titleColor"},
+              "titleFontSize": 12,
+              "labelColor": {"expr": "labelColor"},
+              "labelFont": {"expr": "defaultFont"},
+              "titleFont": {"expr": "defaultFont"}
+            }
+          },
+          "mark": "bar",
+          "data": [],
+          "encoding": {
+              "x": {"field": "entry_time_dayname", "sort": null},
+              "y": {"field": "total_profit_morning", "type": "quantitative", "sort": null},
+              "color": {"value": "#4285F4"}
+          }
+      }
+  },
+  "total_profit_by_day_afternoon": {
+      "renderer": "vega",
+      "spec": {
+          "$schema": "https://vega.github.io/schema/vega-lite/v5.json",
+          "config": {
+            "params": [
+              {
+                "name": "defaultFont",
+                "value": "var(--malloy-font-family, Roboto)"
+              },
+              {
+                "name": "titleColor",
+                "value": "var(--malloy-title-color, #505050)"
+              },
+              {
+                "name": "labelColor",
+                "value": "var(--malloy-label-color, #505050)"
+              }
+            ],
+            "background": null,
+            "color": {"expr": "titleColor"},
+            "header": {
+              "labelFont": {"expr": "defaultFont"},
+              "titleFont": {"expr": "defaultFont"},
+              "titleFontWeight": 500
+            },
+            "text": {
+              "font": {"expr": "defaultFont"},
+              "color": {"expr": "labelColor"}
+            },
+            "mark": {
+              "font": {"expr": "defaultFont"},
+              "color": {"expr": "labelColor"}
+            },
+            "title": {
+              "font": {"expr": "defaultFont"},
+              "subtitleFont": {"expr": "defaultFont"},
+              "fontWeight": 500
+            },
+            "axis": {
+              "labelColor": {"expr": "labelColor"},
+              "labelFont": {"expr": "defaultFont"},
+              "titleFont": {"expr": "defaultFont"},
+              "titleFontWeight": 500,
+              "titleColor": {"expr": "titleColor"},
+              "titleFontSize": 12,
+              "labelAngle": -30
+            },
+            "legend": {
+              "titleFontWeight": 500,
+              "titleColor": {"expr": "titleColor"},
+              "titleFontSize": 12,
+              "labelColor": {"expr": "labelColor"},
+              "labelFont": {"expr": "defaultFont"},
+              "titleFont": {"expr": "defaultFont"}
+            }
+          },
+          "mark": "bar",
+          "data": [],
+          "encoding": {
+              "x": {"field": "entry_time_dayname", "sort": null},
+              "y": {"field": "total_profit_afternoon", "type": "quantitative", "sort": null},
+              "color": {"value": "#4285F4"}
+          }
+      }
+  }
+}

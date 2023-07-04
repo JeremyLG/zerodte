@@ -5,7 +5,7 @@ source: byob_detail is table('duckdb:../data/byob/2.1-50-1.5-trades.csv') {
     primary_key: pkey
   
     declare:
-        id is split_part(trade, '-', 1)
+        id is split_part!(trade, '-', 1)
         pkey is concat(id, EntryTime::string, Time::string)
         is_stopped is `Bid High` > open_price*(1 + 1.5)
         profit is 100*(open_price - `Bid High`) - 3.2

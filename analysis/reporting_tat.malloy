@@ -3,16 +3,21 @@
 import "dwh_tat.malloy"
 
 query: tat_dashboard is tat -> {
+        where: (DateOpened.day <= current_date!()::timestamp) and (TradeType != 'IronCondor-Full')
   nest: money_metrics
   nest: trades_metrics
   nest: fees_metrics
   nest: metrics_by_tradetype is {
     group_by: TradeType
-    aggregate: money_metrics
+    nest: money_metrics
+  }
+  nest: metrics_by_dayname is {
+    group_by: opened_dayname TradeType
+    nest: money_metrics
   }
   nest: metrics_by_date is {
     group_by: opened_date
-    aggregate: money_metrics
+    nest: money_metrics
   }
   nest: daily
 }

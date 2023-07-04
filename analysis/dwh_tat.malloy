@@ -17,6 +17,16 @@ source: tat is from_sql(tat_sql_db) {
 
     declare:
         opened_date is DateOpened.day
+        opened_daynumber is day_of_week(DateOpened)
+        opened_dayname is opened_daynumber ?
+            pick '  Monday' when 2
+            pick '  Tuesday' when 3
+            pick '  Wednesday' when 4
+            pick ' Thursday' when 5
+            pick 'Friday' when 6
+            pick 'Saturday' when 0
+            pick 'Sunday' when 1
+            else null
         is_trade_won is ProfitLoss >= 0
         slippage is pick PriceStopTarget + PriceClose when (PriceClose < 0) and (abs(PriceClose) > PriceStopTarget) else 0
 
@@ -84,7 +94,7 @@ source: tat is from_sql(tat_sql_db) {
         group_by: win_or_lose
         aggregate:
             days_count is days_count.sum()
-            days_percent is days_count.sum() / any_value(all_days)
+            days_percent is days_count.sum() / any_value!(all_days)
             avg_profit is sum(sum_profit)/days_count.sum()
     }
 }

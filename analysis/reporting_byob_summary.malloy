@@ -2,14 +2,39 @@
 
 import "dwh_byob_summary.malloy"
 
-query: byob_summary -> {
-    where: entry_time_month > '2022-05-01'::timestamp and is_main_strategy
+query: main is byob_summary -> {
+    where: (entry_time_month > '2022-05-01'::timestamp) and is_main_strategy
     aggregate:
         total_profit
         total_profit_morning
         total_profit_afternoon
-    nest:
-        total_profit_by_day_morning
-        total_profit_by_day_afternoon
-        total_profit_by_month
+
+        
+    nest: d is {
+        
+        where: (entry_time_month >= '2023-04-01'::timestamp) and is_main_strategy
+        group_by:
+            entry_time_dayname
+            OptionType
+        aggregate: total_profit
+    }
+    nest: `Overall since June2022` is {
+        nest:
+            total_profit_by_day_morning
+            total_profit_by_day_afternoon
+    }
+    nest: `By Year since June2022` is {
+        group_by: entry_year is EntryTime.year
+        nest:
+            total_profit_by_day_morning
+            total_profit_by_day_afternoon
+    }
+
+    nest: `By Month since June2022` is {
+        group_by: entry_month is EntryTime.month
+        nest:
+            total_profit_by_day_morning
+            total_profit_by_day_afternoon
+    }
+
 }

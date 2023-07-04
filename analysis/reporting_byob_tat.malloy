@@ -1,0 +1,71 @@
+import "dwh_byob_summary.malloy"
+import "dwh_tat.malloy"
+
+query: discrepancies is tat -> {
+    declare:
+        pnl_with_tat is sum_profit_wo_qty
+        pnl_with_backtest is byob_summary.total_profit
+
+    where: (DateOpened.day < now.day - 1 day) and DateOpened.day > '2023-06-01'::timestamp
+    
+    join_one: byob_summary
+        on byob_summary.EntryTime.hour = DateOpened.hour
+        and seconds(byob_summary.EntryTime to DateOpened) >= 0*60
+        and seconds(byob_summary.EntryTime to DateOpened) < (pick 12 when hour(byob_summary.EntryTime) = 9 else 15)*60
+        and byob_summary.stop = StopMultiple
+        and byob_summary.OptionType = substr(TradeType, 1, 1)
+    
+    // where: byob_summary.EntryTime = null
+
+    aggregate:
+        trades_count
+        pnl_with_tat
+        pnl_with_backtest
+        avg_premium
+        bt_premium is byob_summary.avg_premium
+        premium_disc is avg(
+            pick byob_summary.Premium - PriceOpen
+            when byob_summary.Premium - PriceOpen > 0 and (byob_summary.Premium - PriceOpen < 0.3 ) and ProfitLoss/Qty != 0
+            else null
+        )
+        profit_disc is avg(
+            pick ProfitLoss/Qty-(byob_summary.ProfitLossAfterSlippage*100 - byob_summary.open_slippage -byob_summary.CommissionFees)
+            when
+                ProfitLoss/Qty != 0 and (byob_summary.ProfitLossAfterSlippage*100 - byob_summary.open_slippage -byob_summary.CommissionFees != 0)
+            else null
+        )
+        profit_discc is sum(ProfitLoss/Qty-(byob_summary.ProfitLossAfterSlippage*100 - byob_summary.open_slippage -byob_summary.CommissionFees)
+        )
+    nest: monthly is {
+        group_by: time is DateOpened.month
+        aggregate:
+            pnl_with_tat
+            pnl_with_backtest
+    }
+    nest: daily is {
+        group_by: opened_date
+        aggregate:
+            pnl_with_tat
+            pnl_with_backtest
+    }
+    nest: dailyy is {
+        group_by: opened_dayname
+        order_by: opened_dayname
+        aggregate:
+            pnl_with_tat
+            pnl_with_backtest
+    }
+    nest: hourly is {
+        group_by:
+            DateOpened
+            TradeType
+            bt_premium is byob_summary.Premium
+            tat_premium is PriceOpen
+            StopMultiple
+        aggregate:
+            pnl_with_tat
+            pnl_with_backtest
+            matches is count(distinct byob_summary.EntryTime)
+        order_by: DateOpened desc
+    }
+}

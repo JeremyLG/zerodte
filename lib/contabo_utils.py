@@ -2,7 +2,6 @@ import os
 
 import paramiko
 
-
 # Read the .env file and populate environment variables
 with open(".env", "r") as file:
     for line in file:

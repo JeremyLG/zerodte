@@ -1,39 +1,30 @@
 import datetime
 import glob
-from io import StringIO
 import logging
 import os
-import requests
+from io import StringIO
 
 import pandas as pd
+import requests
 
-from .settings import CONF
-from .utils import headers, mapping_v2, generate_date_ranges
+from .config import CONF, DEFAULT_DT, ENTRIES_PATH, Conf
+from .utils import (
+    HEADERS,
+    build_multiple_entries,
+    generate_date_ranges,
+    get_last_date,
+    is_any_dataframe_not_none,
+    is_existing_csv_file,
+)
 
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
 )
 
 
-def build_req_v2(
-    max_premium,
-    min_premium,
-    width,
-    stop,
-    entries,
-    start_date,
-    end_date,
+def build_payload(
+    conf: Conf, start_date: datetime.datetime, end_date: datetime.datetime
 ):
-    def build_multiple_entries(entries: list[str] | None):
-        """
-        Build filtered entries through inverting et reverting mapping
-        """    
-        if entries:
-            inv_map = {v: k for k, v in mapping_v2.items()}
-            filtered_mapping = {key: inv_map[key] for key in entries}
-            return {v: k for k, v in filtered_mapping.items()}
-        return mapping_v2
-
     def build_date(dt: datetime.datetime) -> str:
         """
         Format a datetime in the correct way for the requests to be effective
@@ -44,20 +35,20 @@ def build_req_v2(
     if end_date:
         end_date = build_date(end_date)
 
-    data = {
+    return {
         "ctl00$ContentPlaceHolder1$ddDataset": "1",
         "ctl00$ContentPlaceHolder1$txtShare": "https://tradeautomationtoolbox.com/byob-ticks/?save=yaYw2Jg",
         "ctl00$ContentPlaceHolder1$ddStrikeSelection": "PremiumMax"
-        if max_premium
+        if conf.max_premium
         else "PremiumMin",
-        "ctl00$ContentPlaceHolder1$txtStrikePremium": max_premium or min_premium,
-        "ctl00$ContentPlaceHolder1$ddWidth": width,
+        "ctl00$ContentPlaceHolder1$txtStrikePremium": conf.premium,
+        "ctl00$ContentPlaceHolder1$ddWidth": conf.width,
         "ctl00$ContentPlaceHolder1$ddQuantitySelection": "Fixed",
         "ctl00$ContentPlaceHolder1$ddQuantity": "1",
         "ctl00$ContentPlaceHolder1$txtQuantityBP": "0",
         "ctl00$ContentPlaceHolder1$txtQuantityMax": "",
         "ctl00$ContentPlaceHolder1$txtAccountStart": "30000",
-        "ctl00$ContentPlaceHolder1$ddStop": stop,
+        "ctl00$ContentPlaceHolder1$ddStop": conf.stop,
         "ctl00$ContentPlaceHolder1$ddProfitTarget": "P100",
         "ctl00$ContentPlaceHolder1$txtCommOpen": "3.2",
         "ctl00$ContentPlaceHolder1$txtCommClose": "3.2",
@@ -73,7 +64,7 @@ def build_req_v2(
         "ctl00$ContentPlaceHolder1$txtTimeStart": "",
         "ctl00$ContentPlaceHolder1$txtTimeEnd": "",
         "ctl00$ContentPlaceHolder1$rblOptionType": "B",
-        **build_multiple_entries(entries),
+        **build_multiple_entries(conf.entries),
         "ctl00$ContentPlaceHolder1$ddTrend": "",
         "__EVENTTARGET": "ctl00$ContentPlaceHolder1$btnExport",
         "__EVENTARGUMENT": "",
@@ -82,63 +73,47 @@ def build_req_v2(
         "__EVENTVALIDATION": "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",
     }
 
+
+def single_requests_byob(
+    conf: Conf, start_date: datetime.datetime, end_date: datetime.datetime
+) -> pd.DataFrame | None:
+    """
+    Build a payload from the conf and start/end dates to requests BYOB
+    Return a pandas if there was no error encountered
+    """
+    payload = build_payload(conf, start_date, end_date)
     response = requests.post(
         "https://tradeautomationtoolbox.com/byob-ticks/",
-        headers=headers,
-        data=data,
+        headers=HEADERS,
+        data=payload,
     )
     try:
         return pd.read_csv(StringIO(response.text))
     except pd.errors.ParserError as e:
         with open("errors.txt", "a") as f:
-            f.write(f"{max_premium}-{width}-{stop}-{start_date}-{end_date}")
+            f.write(conf.strategy_name)
             f.write("\n")
 
 
-def get_last_date(directory: str) -> datetime.date | None:
-    files = os.listdir(directory)
-    if files:
-        last_date = max([f.split(".")[0] for f in files])
-        logging.info(last_date)
-        try:
-            return datetime.datetime.strptime(last_date, "%Y-%m-%d").date() + datetime.timedelta(days=1)
-        except ValueError as e:
-            logging.error(e)
-            return None
-    return None
+def batch_requests_byob():
+    for strategy in CONF:
+        directory = f"{ENTRIES_PATH}-{strategy.strategy_name}"
+        os.makedirs(directory) if not os.path.exists(directory) else None
+        start_date = get_last_date(directory) or DEFAULT_DT
+        end_date = datetime.date.today()
+        dfs = []
+        for st, ed in generate_date_ranges(start_date, end_date):
+            logging.info("calling byob endpoint")
+            df = single_requests_byob(conf=strategy, start_date=st, end_date=ed)
+            dfs.append(df)
+        if is_any_dataframe_not_none(dfs):
+            logging.info("appending and deleting existing data file")
+            dfs.append(is_existing_csv_file(directory))
+            df = pd.concat(dfs)
+            end_date = pd.to_datetime(df["EntryTime"]).dt.strftime("%Y-%m-%d").max()
+            logging.info("saving new data file")
+            df.to_csv(f"{directory}/{end_date}.csv")
 
 
 if __name__ == "__main__":
-    for strategy in CONF:
-        strategy_name = strategy.get("strategy_name")
-        directory = f"../../data/byob/{strategy_name}"
-        os.makedirs(directory) if not os.path.exists(directory) else None
-        start_date = (
-            get_last_date(directory) or strategy.get("start_date") or datetime.date(2020, 1, 1)
-        )
-        end_date = strategy.get("end_date") or datetime.date.today()
-        dfs = []
-        for experiment in strategy.get("strategies"):
-            mini_experiments = [
-                {
-                    **experiment,
-                    "start_date": st,
-                    "end_date": ed,
-                }
-                for st, ed in generate_date_ranges(start_date, end_date)
-            ]
-            for mini_experiment in mini_experiments:
-                logging.info(f"Going for the experiment: {mini_experiment}")
-                dfs.append(build_req_v2(**mini_experiment))
-        if any(df is not None for df in dfs):
-            csv_files = glob.glob(f"{directory}/*.csv")
-            for file in csv_files:
-                logging.info("concatening new data with existing file")
-                df = pd.read_csv(file)
-                dfs.append(df)
-                logging.info("removing old csv file")
-                os.remove(file)
-            df = pd.concat(dfs)
-            end_date = pd.to_datetime(df["EntryTime"]).dt.strftime("%Y-%m-%d").max()
-            logging.info("saving data file")
-            df.to_csv(f"{directory}/{end_date}.csv")
+    batch_requests_byob()
